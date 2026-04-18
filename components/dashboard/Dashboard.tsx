@@ -1,18 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { Model, QueryRecord } from "@/lib/mockData";
+import { Model } from "@/lib/mockData";
+import { ModelBackend } from "@/lib/api";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import QueryPanel from "./QueryPanel";
 import DetailPanel from "./DetailPanel";
 
+interface HistoryItem {
+  question: string;
+  sql: string;
+  timestamp: string;
+}
+
 export default function Dashboard() {
-  const [activeDataset, setActiveDataset] = useState("spider");
-  const [activeSchema, setActiveSchema]   = useState("concert_singer");
-  const [activeNav, setActiveNav]         = useState("query");
-  const [model, setModel]                 = useState<Model>("qwen");
-  const [selected, setSelected]           = useState<QueryRecord | null>(null);
+  const [activeDataset, setActiveDataset]           = useState("spider");
+  const [activeSchema, setActiveSchema]             = useState("");
+  const [activeNav, setActiveNav]                   = useState("query");
+  const [model, setModel]                           = useState<Model>("qwen");
+  const [useRag, setUseRag]                         = useState(true);
+  const [useSchemaConstrained, setUseSchemaConstrained] = useState(true);
+  const [autoRepair, setAutoRepair]                 = useState(false);
+  const [history, setHistory]                       = useState<HistoryItem[]>([]);
+  const [currentQuestion, setCurrentQuestion]       = useState("");
+
+  // CoSQL conversation history: alternating question/sql strings
+  const conversationHistory = history.flatMap((h) => [h.question, h.sql]);
+
+  function handleQueryComplete(question: string, sql: string) {
+    setHistory((prev) => [
+      ...prev,
+      { question, sql, timestamp: new Date().toLocaleTimeString() },
+    ]);
+  }
+
+  // Map model key to ModelBackend string
+  const modelBackendMap: Record<Model, ModelBackend> = {
+    qwen:    "ollama",
+    gpt4o:   "openai",
+    seq2sql: "seq2sql",
+  };
 
   return (
     <div className="h-screen flex flex-col bg-zinc-50 overflow-hidden">
@@ -26,12 +54,20 @@ export default function Dashboard() {
           activeNav={activeNav}
           setActiveNav={setActiveNav}
         />
+
         <main className="flex-1 overflow-y-auto p-5">
           {activeNav === "query" && (
-            <QueryPanel selected={selected} setSelected={setSelected} />
+            <QueryPanel
+              database={activeSchema}
+              model={modelBackendMap[model]}
+              useRag={useRag}
+              useSchemaConstrained={useSchemaConstrained}
+              conversationHistory={conversationHistory}
+              onQueryComplete={handleQueryComplete}
+            />
           )}
           {activeNav === "evaluation" && (
-            <Placeholder title="Evaluation" description="Exec Accuracy & Exact Match charts across models and datasets will appear here." />
+            <Placeholder title="Evaluation" description="Exec Accuracy & Exact Match charts across models will appear here." />
           )}
           {activeNav === "failures" && (
             <Placeholder title="Failure Analysis" description="Categorized failure modes (schema linking, join errors, aggregation, etc.) will appear here." />
@@ -40,11 +76,18 @@ export default function Dashboard() {
             <Placeholder title="Model Comparison" description="Side-by-side SQL output from Seq2SQL, Qwen2.5-Coder, and GPT-4o will appear here." />
           )}
         </main>
+
         <DetailPanel
           model={model}
           setModel={setModel}
-          selected={selected}
-          setSelected={setSelected}
+          useRag={useRag}
+          setUseRag={setUseRag}
+          useSchemaConstrained={useSchemaConstrained}
+          setUseSchemaConstrained={setUseSchemaConstrained}
+          autoRepair={autoRepair}
+          setAutoRepair={setAutoRepair}
+          history={history}
+          onSelectHistory={setCurrentQuestion}
         />
       </div>
     </div>
