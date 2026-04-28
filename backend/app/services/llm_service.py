@@ -12,7 +12,6 @@ Each backend implements the same signature:
 
 from __future__ import annotations
 
-import httpx
 import re
 
 from app.core.config import get_settings
@@ -84,33 +83,6 @@ def extract_sql(raw: str) -> str:
 
 
 # ──────────────────────────────────────────────
-# Ollama backend
-# ──────────────────────────────────────────────
-
-def _generate_ollama(prompt: str) -> str:
-    url = f"{settings.ollama_base_url}/api/generate"
-    payload = {
-        "model": settings.ollama_model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.0},
-    }
-    try:
-        with httpx.Client(timeout=120.0) as client:
-            response = client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            return extract_sql(data.get("response", ""))
-    except httpx.ConnectError as exc:
-        raise LLMUnavailableError(
-            f"Cannot reach Ollama at {settings.ollama_base_url}. "
-            "Ensure Ollama is running (`ollama serve`)."
-        ) from exc
-    except httpx.HTTPStatusError as exc:
-        raise LLMUnavailableError(f"Ollama returned HTTP {exc.response.status_code}.") from exc
-
-
-# ──────────────────────────────────────────────
 # OpenAI backend
 # ──────────────────────────────────────────────
 
@@ -179,12 +151,10 @@ def _generate_seq2sql(prompt: str) -> str:
 def generate_sql(prompt: str, backend: ModelBackend) -> str:
     """Route the prompt to the correct LLM backend."""
     logger.debug("Generating SQL with backend=%s", backend)
-    if backend == ModelBackend.OLLAMA:
-        return _generate_ollama(prompt)
+    if backend == ModelBackend.GROQ:
+        return _generate_groq(prompt)
     elif backend == ModelBackend.OPENAI:
         return _generate_openai(prompt)
-    elif backend == ModelBackend.GROQ:
-        return _generate_groq(prompt)
     elif backend == ModelBackend.SEQ2SQL:
         return _generate_seq2sql(prompt)
     else:

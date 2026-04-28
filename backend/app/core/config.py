@@ -20,10 +20,6 @@ class Settings(BaseSettings):
     # Database
     sqlite_db_dir: str = "./data/databases"
 
-    # Ollama
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5-coder:7b"
-
     # OpenAI
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"

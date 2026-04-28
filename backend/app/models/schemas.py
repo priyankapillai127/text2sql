@@ -18,10 +18,9 @@ from pydantic import BaseModel, Field
 # ──────────────────────────────────────────────
 
 class ModelBackend(str, Enum):
-    OLLAMA = "ollama"       # local open-source model via Ollama
+    GROQ = "groq"           # Groq-hosted LLM via the ML pipeline
     OPENAI = "openai"       # proprietary frontier model via API
     SEQ2SQL = "seq2sql"     # classical baseline (stub)
-    GROQ = "groq"           # Groq-hosted LLM via the ML pipeline
 
 
 class ErrorCategory(str, Enum):
@@ -42,7 +41,7 @@ class ErrorCategory(str, Enum):
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=3, description="Natural language question")
     database_name: str = Field(..., description="Target Spider/CoSQL database name")
-    model_backend: ModelBackend = Field(ModelBackend.OLLAMA, description="LLM backend to use")
+    model_backend: ModelBackend = Field(ModelBackend.GROQ, description="LLM backend to use")
     use_rag: bool = Field(True, description="Whether to augment prompt with RAG context")
     pipeline: str = Field(
         "rag_bt",
@@ -58,7 +57,6 @@ class QueryRequest(BaseModel):
             "question": "How many singers are there?",
             "database_name": "concert_singer",
             "model_backend": "groq",
-            "use_rag": True,
             "pipeline": "rag_bt",
             "conversation_history": []
         }
@@ -112,7 +110,7 @@ class EvaluationRequest(BaseModel):
     database_name: str
     question: str
     ground_truth_sql: str
-    model_backend: ModelBackend = ModelBackend.OLLAMA
+    model_backend: ModelBackend = ModelBackend.GROQ
     use_rag: bool = True
 
     model_config = {"json_schema_extra": {
@@ -139,7 +137,7 @@ class EvaluationResult(BaseModel):
 
 class BatchEvaluationRequest(BaseModel):
     items: list[EvaluationRequest]
-    model_backend: ModelBackend = ModelBackend.OLLAMA
+    model_backend: ModelBackend = ModelBackend.GROQ
     use_rag: bool = True
 
 

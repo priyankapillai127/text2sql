@@ -7,13 +7,13 @@ GET /health       — lightweight liveness probe (always fast)
 GET /health/full  — deep check of all system components
 """
 
-import httpx
 from fastapi import APIRouter
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models.schemas import ComponentStatus, HealthResponse
 from app.rag import rag_service
+from app.services import ml_pipeline_service
 from app.services.database_service import list_databases
 
 router = APIRouter(prefix="/health", tags=["Health"])
@@ -38,7 +38,7 @@ def health_check() -> HealthResponse:
 @router.get(
     "/full",
     response_model=HealthResponse,
-    summary="Deep status check — probes Ollama, databases, and RAG index",
+    summary="Deep status check — probes Groq pipeline, databases, and RAG index",
 )
 def full_health_check() -> HealthResponse:
     """
@@ -50,17 +50,18 @@ def full_health_check() -> HealthResponse:
     # ── API itself ─────────────────────────────────────────
     components.append(ComponentStatus(name="api", status="ok"))
 
-    # ── Ollama ─────────────────────────────────────────────
-    try:
-        with httpx.Client(timeout=5.0) as client:
-            resp = client.get(f"{settings.ollama_base_url}/api/tags")
-            resp.raise_for_status()
-            models = [m.get("name", "") for m in resp.json().get("models", [])]
-            detail = f"available models: {', '.join(models) or 'none'}"
-            components.append(ComponentStatus(name="ollama", status="ok", detail=detail))
-    except Exception as exc:
+    # ── Groq / ML pipeline ────────────────────────────────
+    if ml_pipeline_service.is_ready():
         components.append(
-            ComponentStatus(name="ollama", status="unavailable", detail=str(exc))
+            ComponentStatus(name="groq_pipeline", status="ok", detail="ML pipeline loaded")
+        )
+    else:
+        components.append(
+            ComponentStatus(
+                name="groq_pipeline",
+                status="unavailable",
+                detail="ML pipeline not initialised — check GROQ_API_KEY and ml/data/",
+            )
         )
 
     # ── Databases ──────────────────────────────────────────

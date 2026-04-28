@@ -6,6 +6,7 @@ Routes for database schema inspection.
 
 from fastapi import APIRouter
 from app.models.schemas import SchemaResponse
+from app.services import ml_pipeline_service
 from app.services.database_service import get_schema, list_databases
 
 router = APIRouter(prefix="/schema", tags=["Schema"])
@@ -17,7 +18,12 @@ router = APIRouter(prefix="/schema", tags=["Schema"])
     response_model=list[str],
 )
 def list_all_databases() -> list[str]:
-    """Return the names of all SQLite databases available under the configured directory."""
+    """
+    Returns Spider database IDs from the ML pipeline (tables.json) when ready,
+    falling back to filesystem scanning of SQLITE_DB_DIR.
+    """
+    if ml_pipeline_service.is_ready():
+        return ml_pipeline_service.get_available_databases()
     return list_databases()
 
 

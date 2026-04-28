@@ -375,6 +375,11 @@ def _run_rag_bt(question: str, db_id: str, ctx: dict) -> dict:
 # MAIN ENTRY POINT
 # ══════════════════════════════════════════════════════════════
 
+def get_available_databases(ctx: dict) -> list:
+    """Return a sorted list of all Spider database IDs available in the loaded data."""
+    return sorted(ctx["schema_dict"].keys())
+
+
 def run(question: str, db_id: str, ctx: dict,
         pipeline: str = "rag_bt") -> dict:
     """

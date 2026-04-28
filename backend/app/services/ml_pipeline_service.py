@@ -81,6 +81,14 @@ def is_ready() -> bool:
     return _ctx is not None
 
 
+def get_available_databases() -> list[str]:
+    """Return all Spider database IDs known to the ML pipeline."""
+    if not is_ready():
+        return []
+    mod = _ensure_module()
+    return mod.get_available_databases(_ctx)
+
+
 def run(question: str, db_id: str, pipeline: str = "rag_bt") -> dict:
     """
     Execute the ML pipeline for a single question.
