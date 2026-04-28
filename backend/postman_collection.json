@@ -1,0 +1,395 @@
+{
+  "info": {
+    "name": "Text2SQL Backend — SP26 Group 28",
+    "description": "Complete Postman collection for the Text2SQL FastAPI backend.\nBase URL variable: {{base_url}} = http://localhost:8000/api/v1\n\nImport this file into Postman, set the 'base_url' collection variable, and run.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "text2sql-sp26-g28"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Liveness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/",
+              "host": ["{{base_url}}"],
+              "path": ["health", ""]
+            },
+            "description": "Lightweight liveness probe. Always returns 200 with status=healthy. Use this for load-balancer / k8s readiness checks."
+          },
+          "response": [
+            {
+              "name": "200 OK — Healthy",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"healthy\",\n  \"version\": \"1.0.0\",\n  \"components\": [\n    { \"name\": \"api\", \"status\": \"ok\", \"detail\": null }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Full Status Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/full",
+              "host": ["{{base_url}}"],
+              "path": ["health", "full"]
+            },
+            "description": "Deep health check — probes Ollama reachability, database availability, RAG index status, and OpenAI key configuration.\n\nOverall status:\n- 'healthy'   → all components ok\n- 'degraded'  → some components degraded (e.g. RAG not built yet)\n- 'unhealthy' → critical component unavailable (e.g. Ollama down)"
+          },
+          "response": [
+            {
+              "name": "200 OK — Degraded (RAG not built yet)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"degraded\",\n  \"version\": \"1.0.0\",\n  \"components\": [\n    { \"name\": \"api\",      \"status\": \"ok\",         \"detail\": null },\n    { \"name\": \"ollama\",   \"status\": \"ok\",         \"detail\": \"available models: qwen2.5-coder:7b\" },\n    { \"name\": \"databases\",\"status\": \"ok\",         \"detail\": \"1 database(s) found: concert_singer\" },\n    { \"name\": \"rag_index\",\"status\": \"degraded\",   \"detail\": \"Index not built yet. POST /rag/build-index to create it.\" },\n    { \"name\": \"openai\",   \"status\": \"degraded\",   \"detail\": \"OPENAI_API_KEY not set\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Schema",
+      "item": [
+        {
+          "name": "List All Databases",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/schema/databases",
+              "host": ["{{base_url}}"],
+              "path": ["schema", "databases"]
+            },
+            "description": "Returns a list of all available SQLite database names under the configured SQLITE_DB_DIR."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "[\"concert_singer\"]"
+            }
+          ]
+        },
+        {
+          "name": "Get Database Schema",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/schema/concert_singer",
+              "host": ["{{base_url}}"],
+              "path": ["schema", "concert_singer"]
+            },
+            "description": "Returns the full schema for the specified database: table names, columns (name, type, PK flag, nullable), and foreign key relationships.\n\nReplace 'concert_singer' with any database from the list endpoint."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"database_name\": \"concert_singer\",\n  \"tables\": [\n    {\n      \"name\": \"singer\",\n      \"columns\": [\n        { \"name\": \"singer_id\", \"type\": \"INTEGER\", \"primary_key\": true,  \"nullable\": true },\n        { \"name\": \"name\",      \"type\": \"TEXT\",    \"primary_key\": false, \"nullable\": true },\n        { \"name\": \"country\",   \"type\": \"TEXT\",    \"primary_key\": false, \"nullable\": true }\n      ],\n      \"foreign_keys\": []\n    }\n  ]\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{ \"detail\": \"Database 'unknown_db' not found under './data/databases'.\" }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RAG",
+      "item": [
+        {
+          "name": "Build FAISS Index",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examples_path\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/rag/build-index",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "build-index"]
+            },
+            "description": "Embeds all (question, SQL) pairs from the Spider training JSON and writes a FAISS index to disk.\n\nSet 'examples_path' to a custom path, or leave null to use the path from .env (SPIDER_EXAMPLES_PATH).\n\nMust be called at least once before RAG is active. The index persists and is reloaded automatically on next startup."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"indexed_count\": 12,\n  \"index_path\": \"./data/faiss_index\",\n  \"message\": \"Index built successfully with 12 examples.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Load Index from Disk",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rag/load-index",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "load-index"]
+            },
+            "description": "Reloads a previously built FAISS index from disk into memory. Useful if the server was restarted and the lifespan loader failed for some reason."
+          },
+          "response": [
+            {
+              "name": "200 OK — Loaded",
+              "status": "OK",
+              "code": 200,
+              "body": "{ \"loaded\": true, \"message\": \"Index loaded.\" }"
+            },
+            {
+              "name": "200 OK — No Index Found",
+              "status": "OK",
+              "code": 200,
+              "body": "{ \"loaded\": false, \"message\": \"No index found on disk. Build it first.\" }"
+            }
+          ]
+        },
+        {
+          "name": "RAG Index Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rag/status",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "status"]
+            },
+            "description": "Quick check: is the FAISS index loaded in memory and ready to serve retrievals?"
+          },
+          "response": [
+            {
+              "name": "200 OK — Ready",
+              "status": "OK",
+              "code": 200,
+              "body": "{ \"ready\": true, \"indexed_examples\": 12 }"
+            },
+            {
+              "name": "200 OK — Not Ready",
+              "status": "OK",
+              "code": 200,
+              "body": "{ \"ready\": false, \"indexed_examples\": 0 }"
+            }
+          ]
+        },
+        {
+          "name": "Retrieve Examples (Debug)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rag/retrieve?question=How many singers are there?&top_k=3",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "retrieve"],
+              "query": [
+                { "key": "question", "value": "How many singers are there?" },
+                { "key": "top_k",    "value": "3" }
+              ]
+            },
+            "description": "Development / inspection endpoint. Returns the top-K most similar training examples for the given question. Useful for verifying that retrieval is working before running full generation."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"question\": \"How many singers are there?\",\n  \"retrieved\": [\n    { \"question\": \"How many singers are there?\", \"sql\": \"SELECT count(*) FROM singer\", \"db_id\": \"concert_singer\", \"score\": 0.9998 },\n    { \"question\": \"What is the average age of singers?\", \"sql\": \"SELECT avg(age) FROM singer\", \"db_id\": \"concert_singer\", \"score\": 0.8721 }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Query",
+      "item": [
+        {
+          "name": "Generate & Execute SQL (Ollama + RAG)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How many singers are there?\",\n  \"database_name\": \"concert_singer\",\n  \"model_backend\": \"ollama\",\n  \"use_rag\": true,\n  \"conversation_history\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/query/",
+              "host": ["{{base_url}}"],
+              "path": ["query", ""]
+            },
+            "description": "Core endpoint. Accepts a natural language question and returns:\n- generated_sql: the SQL produced by the LLM\n- executed: whether the SQL ran without error\n- execution_result: array of result rows (objects)\n- execution_error: error string if execution failed\n- repaired: whether the repair loop was triggered\n- rag_context_used: whether RAG examples were injected\n- retrieved_examples: the examples that were injected\n- latency_ms: end-to-end time in milliseconds\n\nmodel_backend options: 'ollama' | 'openai' | 'seq2sql'"
+          },
+          "response": [
+            {
+              "name": "200 OK — Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"question\": \"How many singers are there?\",\n  \"generated_sql\": \"SELECT count(*) FROM singer;\",\n  \"executed\": true,\n  \"execution_result\": [ { \"count(*)\": 5 } ],\n  \"execution_error\": null,\n  \"repaired\": false,\n  \"repair_attempts\": 0,\n  \"rag_context_used\": true,\n  \"retrieved_examples\": [\n    \"How many singers are there? → SELECT count(*) FROM singer\"\n  ],\n  \"model_backend\": \"ollama\",\n  \"latency_ms\": 342.5\n}"
+            },
+            {
+              "name": "503 Ollama Unavailable",
+              "status": "Service Unavailable",
+              "code": 503,
+              "body": "{ \"detail\": \"Cannot reach Ollama at http://localhost:11434. Ensure Ollama is running.\" }"
+            }
+          ]
+        },
+        {
+          "name": "Generate & Execute SQL (OpenAI, no RAG)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"List all concert names and their stadiums\",\n  \"database_name\": \"concert_singer\",\n  \"model_backend\": \"openai\",\n  \"use_rag\": false,\n  \"conversation_history\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/query/",
+              "host": ["{{base_url}}"],
+              "path": ["query", ""]
+            },
+            "description": "Same endpoint but using the OpenAI frontier model. Requires OPENAI_API_KEY in .env."
+          }
+        },
+        {
+          "name": "Generate SQL (CoSQL conversational mode)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Which ones are in the USA?\",\n  \"database_name\": \"concert_singer\",\n  \"model_backend\": \"ollama\",\n  \"use_rag\": true,\n  \"conversation_history\": [\n    \"List all singers.\",\n    \"SELECT name FROM singer\"\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/query/",
+              "host": ["{{base_url}}"],
+              "path": ["query", ""]
+            },
+            "description": "Demonstrates conversational (CoSQL-style) mode. Pass previous question/SQL turns in 'conversation_history'. The backend injects them into the prompt to maintain context."
+          }
+        },
+        {
+          "name": "Generate SQL (Seq2SQL baseline)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How many singers are there?\",\n  \"database_name\": \"concert_singer\",\n  \"model_backend\": \"seq2sql\",\n  \"use_rag\": false,\n  \"conversation_history\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/query/",
+              "host": ["{{base_url}}"],
+              "path": ["query", ""]
+            },
+            "description": "Uses the Seq2SQL stub. Returns a placeholder SQL — replace the stub in llm_service.py with real model inference when integrating the actual Seq2SQL model."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evaluation",
+      "item": [
+        {
+          "name": "Evaluate Single Example",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"database_name\": \"concert_singer\",\n  \"question\": \"How many singers are there?\",\n  \"ground_truth_sql\": \"SELECT count(*) FROM singer\",\n  \"model_backend\": \"ollama\",\n  \"use_rag\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/evaluate/single",
+              "host": ["{{base_url}}"],
+              "path": ["evaluate", "single"]
+            },
+            "description": "Generates SQL for the question, then computes:\n- exact_match: whether generated SQL matches ground truth (normalised)\n- execution_accuracy: whether both SQLs return the same result set\n- error_category: if wrong, classifies the error type\n\nError categories: schema_linking | join_construction | aggregation | nested_query | conversational_context | syntax | execution | unknown"
+          },
+          "response": [
+            {
+              "name": "200 OK — Correct",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"question\": \"How many singers are there?\",\n  \"ground_truth_sql\": \"SELECT count(*) FROM singer\",\n  \"generated_sql\": \"SELECT count(*) FROM singer;\",\n  \"exact_match\": true,\n  \"execution_accuracy\": true,\n  \"error_category\": null,\n  \"error_detail\": null,\n  \"latency_ms\": 415.2\n}"
+            },
+            {
+              "name": "200 OK — Wrong (Schema Linking Error)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"question\": \"How many singers are there?\",\n  \"ground_truth_sql\": \"SELECT count(*) FROM singer\",\n  \"generated_sql\": \"SELECT count(*) FROM singers\",\n  \"exact_match\": false,\n  \"execution_accuracy\": false,\n  \"error_category\": \"schema_linking\",\n  \"error_detail\": \"Generated SQL failed: no such table: singers\",\n  \"latency_ms\": 388.0\n}"
+            }
+          ]
+        },
+        {
+          "name": "Batch Evaluation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model_backend\": \"ollama\",\n  \"use_rag\": true,\n  \"items\": [\n    {\n      \"database_name\": \"concert_singer\",\n      \"question\": \"How many singers are there?\",\n      \"ground_truth_sql\": \"SELECT count(*) FROM singer\",\n      \"model_backend\": \"ollama\",\n      \"use_rag\": true\n    },\n    {\n      \"database_name\": \"concert_singer\",\n      \"question\": \"List all singer names.\",\n      \"ground_truth_sql\": \"SELECT name FROM singer\",\n      \"model_backend\": \"ollama\",\n      \"use_rag\": true\n    },\n    {\n      \"database_name\": \"concert_singer\",\n      \"question\": \"Which stadium has the highest capacity?\",\n      \"ground_truth_sql\": \"SELECT name FROM stadium ORDER BY capacity DESC LIMIT 1\",\n      \"model_backend\": \"ollama\",\n      \"use_rag\": true\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/evaluate/batch",
+              "host": ["{{base_url}}"],
+              "path": ["evaluate", "batch"]
+            },
+            "description": "Runs evaluation over multiple (question, ground_truth_sql) pairs and returns:\n- total: number of examples\n- exact_match_score: EM accuracy (0.0–1.0)\n- execution_accuracy_score: EX accuracy (0.0–1.0)\n- results: per-example EvaluationResult objects\n\nThe batch-level model_backend and use_rag override the per-item values."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"total\": 3,\n  \"exact_match_score\": 0.6667,\n  \"execution_accuracy_score\": 1.0,\n  \"results\": [\n    { \"question\": \"How many singers are there?\",          \"exact_match\": true,  \"execution_accuracy\": true,  \"error_category\": null, \"latency_ms\": 312.1 },\n    { \"question\": \"List all singer names.\",               \"exact_match\": false, \"execution_accuracy\": true,  \"error_category\": null, \"latency_ms\": 287.4 },\n    { \"question\": \"Which stadium has the highest capacity?\",\"exact_match\": true,  \"execution_accuracy\": true,  \"error_category\": null, \"latency_ms\": 401.7 }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
