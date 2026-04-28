@@ -1,0 +1,6 @@
+groq
+faiss-cpu
+sentence-transformers
+networkx
+python-dotenv
+sqlparse

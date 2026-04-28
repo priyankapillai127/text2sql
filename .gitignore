@@ -34,3 +34,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ML data and models
+ml/data/
+ml/.venv/
+
+# Environment variables
+.env
+**/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pkl
+*.index
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (for frontend)
+node_modules/
+.next/
+
+# Python venv
+venv/
+.venv/
+env/
