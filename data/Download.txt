@@ -1,0 +1,16 @@
+Download the ml_data folder from Google Drive:
+https://drive.google.com/drive/folders/1hjzf4Z8a0v8S20WbrLvguIn0i4IVob8b?usp=sharing
+
+
+After downloading:
+1. Rename the folder to 'data'
+2. Place it inside the ml/ directory
+
+Contents:
+- database/          Spider SQLite databases
+- tables.json        Schema definitions
+- all_graphs.pkl     Steiner tree schema graphs
+- faiss_questions.index
+- faiss_schemas.index
+- questions_metadata.pkl
+- schemas_metadata.pkl
