@@ -26,6 +26,17 @@ npm run dev         # http://localhost:3000
 The frontend connects to a backend API. Override the default URL by setting `NEXT_PUBLIC_API_URL` in `frontend/.env.local`.
 
 ---
+## Backend 
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload  # http://localhost:8000
+```
+## Evaluation
+Results, diagnostics, and experiment notebooks are in ml/evaluation/.
+See ml/evaluation/EVALUATION_SUMMARY.md for full results.
+
 
 ## ML Pipeline
 
