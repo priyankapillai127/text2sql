@@ -20,16 +20,15 @@ class Settings(BaseSettings):
     # Database
     sqlite_db_dir: str = "./data/databases"
 
-    # OpenAI
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
-
-    # Groq (used by the ML pipeline)
-    groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    # Ollama (local)
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen2.5-coder:7b"
 
     # ML pipeline directory (relative to backend/ or absolute)
     ml_dir: str = "../ml"
+
+    # SQL repair (Ollama path)
+    max_repair_attempts: int = 2
 
     # RAG
     embedding_model: str = "all-MiniLM-L6-v2"
@@ -37,8 +36,6 @@ class Settings(BaseSettings):
     spider_examples_path: str = "./data/spider_train.json"
     rag_top_k: int = 3
 
-    # SQL Repair
-    max_repair_attempts: int = 2
 
 
 @lru_cache

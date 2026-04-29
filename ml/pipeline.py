@@ -53,24 +53,27 @@ load_dotenv()
 # ── Groq client ───────────────────────────────────────────────
 _groq_client = None
 
+
 def _get_groq():
     global _groq_client
     if _groq_client is None:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GROQ_API_KEY not found. Add it to your .env file.")
+            raise ValueError(
+                "GROQ_API_KEY not found. Add it to your .env file.")
         _groq_client = Groq(api_key=api_key)
     return _groq_client
 
 
 def call_llm(prompt: str, max_tokens: int = 512, temperature: float = 0.0) -> str:
     """Single LLM call via Groq. Returns raw text."""
+    print(f"LLM Prompt:\n{prompt}\n---")  # Debug log for prompt
     client = _get_groq()
     response = client.chat.completions.create(
-        model       = "llama-3.3-70b-versatile",
-        messages    = [{"role": "user", "content": prompt}],
-        max_tokens  = max_tokens,
-        temperature = temperature,
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=max_tokens,
+        temperature=temperature,
     )
     return response.choices[0].message.content.strip()
 
@@ -114,9 +117,9 @@ def setup() -> dict:
         print(f"✅ Error memory loaded — {stats['total_errors']} past errors")
 
     return {
-        "schema_dict" : schema_dict,
-        "faiss_data"  : faiss_data,
-        "all_graphs"  : all_graphs,
+        "schema_dict": schema_dict,
+        "faiss_data": faiss_data,
+        "all_graphs": all_graphs,
         "error_memory": error_memory,
     }
 
@@ -163,8 +166,8 @@ SQL:"""
 
 
 def build_repair_prompt(question: str, schema_text: str,
-                         failed_sql: str, error_msg: str,
-                         attempt: int) -> str:
+                        failed_sql: str, error_msg: str,
+                        attempt: int) -> str:
     if "no such column" in error_msg.lower():
         focus = "A column name is wrong. Check the DATABASE SCHEMA — use exact column names."
     elif "no such table" in error_msg.lower():
@@ -195,30 +198,36 @@ SQL:"""
 
 def _run_raw(question: str, db_id: str, ctx: dict) -> dict:
     """Zero-shot: schema + question, no RAG, no repair."""
+    print("Starting RAW pipeline...")
     schema_dict = ctx["schema_dict"]
-    prompt      = build_raw_prompt(question, db_id, schema_dict)
-    raw         = call_llm(prompt, max_tokens=300)
-    sql         = extract_sql_from_response(raw)
+    prompt = build_raw_prompt(question, db_id, schema_dict)
+    raw = call_llm(prompt, max_tokens=300)
+    sql = extract_sql_from_response(raw)
     result, err = execute_sql(db_id, sql)
 
     return {
-        "sql"      : sql,
-        "result"   : result,
-        "error"    : err,
-        "pipeline" : "raw",
-        "repairs"  : 0,
-        "bt_match" : None,
-        "issue"    : None,
+        "sql": sql,
+        "result": result,
+        "error": err,
+        "pipeline": "raw",
+        "repairs": 0,
+        "bt_match": None,
+        "issue": None,
     }
 
 
 def _run_rag(question: str, db_id: str, ctx: dict) -> dict:
     """RAG + 3-level repair loop."""
-    schema_dict  = ctx["schema_dict"]
-    faiss_data   = ctx["faiss_data"]
-    all_graphs   = ctx["all_graphs"]
+    print(
+        f"Starting RAG pipeline for question: {question} on database: {db_id} - with repair loop")
+    schema_dict = ctx["schema_dict"]
+    faiss_data = ctx["faiss_data"]
+    all_graphs = ctx["all_graphs"]
     error_memory = ctx["error_memory"]
-    schema_text  = get_schema_text(db_id, schema_dict)
+    schema_text = get_schema_text(db_id, schema_dict)
+
+    # Debug log for schema
+    print(f"1Schema text for DB '{db_id}':\n{schema_text}\n---")
 
     # Warning from error memory
     warning_text = error_memory.get_warnings(db_id, question)
@@ -233,14 +242,14 @@ def _run_rag(question: str, db_id: str, ctx: dict) -> dict:
         G = all_graphs.get(db_id)
         if G:
             try:
-                steiner   = steiner_tree_approx(G, terminals)
+                steiner = steiner_tree_approx(G, terminals)
                 from_hint = f"\nSTEINER JOIN PATH (use this for your FROM clause):\n{build_from_clause(steiner)}\n"
             except Exception:
                 pass
 
-    prompt  = build_rag_prompt(question, db_id, examples, schema_dict,
-                                warning_text + from_hint)
-    raw     = call_llm(prompt, max_tokens=300)
+    prompt = build_rag_prompt(question, db_id, examples, schema_dict,
+                              warning_text + from_hint)
+    raw = call_llm(prompt, max_tokens=300)
     current = extract_sql_from_response(raw)
     repairs = 0
 
@@ -285,44 +294,53 @@ def _run_rag(question: str, db_id: str, ctx: dict) -> dict:
         break  # all levels passed
 
     result, err = execute_sql(db_id, current)
+
+    print(f"Final SQL: {current}")
+    print(f"Final Result: {result}")
+    print(f"Final Error: {err}")
+
     return {
-        "sql"      : current,
-        "result"   : result,
-        "error"    : err,
-        "pipeline" : "rag",
-        "repairs"  : repairs,
-        "bt_match" : None,
-        "issue"    : None,
+        "sql": current,
+        "result": result,
+        "error": err,
+        "pipeline": "rag",
+        "repairs": repairs,
+        "bt_match": None,
+        "issue": None,
     }
 
 
 def _run_rag_bt(question: str, db_id: str, ctx: dict) -> dict:
     """RAG + repair + back-translation semantic validation."""
-    schema_dict  = ctx["schema_dict"]
+
+    print(
+        f"Starting RAG+BT pipeline for question: {question} on database: {db_id}")
+
+    schema_dict = ctx["schema_dict"]
     error_memory = ctx["error_memory"]
-    schema_text  = get_schema_text(db_id, schema_dict)
+    schema_text = get_schema_text(db_id, schema_dict)
 
     # Start from RAG result
     base = _run_rag(question, db_id, ctx)
     current = base["sql"]
     repairs = base["repairs"]
     bt_match = None
-    issue    = None
+    issue = None
 
     # Only run BT if SQL executes successfully
     _, exec_err = execute_sql(db_id, current)
     if exec_err is None:
         # Back-translate
         bt_prompt = build_back_translation_prompt(current, schema_text)
-        bt_desc   = call_llm(bt_prompt, max_tokens=150).strip()
+        bt_desc = call_llm(bt_prompt, max_tokens=150).strip()
 
         # Semantic check
         check_prompt = build_semantic_check_prompt(question, bt_desc)
-        check_resp   = call_llm(check_prompt, max_tokens=100)
-        parsed       = parse_semantic_check(check_resp)
+        check_resp = call_llm(check_prompt, max_tokens=100)
+        parsed = parse_semantic_check(check_resp)
 
         bt_match = parsed["match"]
-        issue    = parsed["issue"]
+        issue = parsed["issue"]
 
         # Semantic repair if mismatch
         if not bt_match and issue != "none":
@@ -342,16 +360,16 @@ def _run_rag_bt(question: str, db_id: str, ctx: dict) -> dict:
                 repairs += 1
 
                 # Re-check
-                bt_desc2  = call_llm(
+                bt_desc2 = call_llm(
                     build_back_translation_prompt(current, schema_text),
                     max_tokens=150
                 ).strip()
-                parsed2  = parse_semantic_check(
+                parsed2 = parse_semantic_check(
                     call_llm(build_semantic_check_prompt(question, bt_desc2),
                              max_tokens=100)
                 )
                 bt_match = parsed2["match"]
-                issue    = parsed2["issue"]
+                issue = parsed2["issue"]
                 if bt_match:
                     break
 
@@ -360,14 +378,19 @@ def _run_rag_bt(question: str, db_id: str, ctx: dict) -> dict:
                 error_memory.record(db_id, issue, question, current)
 
     result, err = execute_sql(db_id, current)
+
+    print(f"Final SQL: {current}")
+    print(f"Final Result: {result}")
+    print(f"Final Error: {err}")
+
     return {
-        "sql"      : current,
-        "result"   : result,
-        "error"    : err,
-        "pipeline" : "rag_bt",
-        "repairs"  : repairs,
-        "bt_match" : bt_match,
-        "issue"    : issue,
+        "sql": current,
+        "result": result,
+        "error": err,
+        "pipeline": "rag_bt",
+        "repairs": repairs,
+        "bt_match": bt_match,
+        "issue": issue,
     }
 
 
@@ -407,6 +430,9 @@ def run(question: str, db_id: str, ctx: dict,
             "pipeline": pipeline, "repairs": 0,
             "bt_match": None, "issue": None,
         }
+
+    print(
+        f"Running pipeline '{pipeline}' for question: {question} on database: {db_id}")
 
     if pipeline == "raw":
         return _run_raw(question, db_id, ctx)

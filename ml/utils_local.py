@@ -16,16 +16,16 @@ from pathlib import Path
 # ── Base paths ────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
-DB_DIR   = DATA_DIR / "database"
+DB_DIR = DATA_DIR / "database"
 
 PATHS = {
-    "tables_json"    : DATA_DIR / "tables.json",
+    "tables_json": DATA_DIR / "tables.json",
     "faiss_questions": DATA_DIR / "faiss_questions.index",
-    "faiss_schemas"  : DATA_DIR / "faiss_schemas.index",
-    "q_meta"         : DATA_DIR / "questions_metadata.pkl",
-    "s_meta"         : DATA_DIR / "schemas_metadata.pkl",
-    "all_graphs"     : DATA_DIR / "all_graphs.pkl",
-    "error_memory"   : DATA_DIR / "error_memory.json",
+    "faiss_schemas": DATA_DIR / "faiss_schemas.index",
+    "q_meta": DATA_DIR / "questions_metadata.pkl",
+    "s_meta": DATA_DIR / "schemas_metadata.pkl",
+    "all_graphs": DATA_DIR / "all_graphs.pkl",
+    "error_memory": DATA_DIR / "error_memory.json",
 }
 
 
@@ -55,12 +55,13 @@ def load_faiss_indexes():
 
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-    print(f"✅ FAISS loaded — questions: {q_index.ntotal:,}  schemas: {s_index.ntotal:,}")
+    print(
+        f"✅ FAISS loaded — questions: {q_index.ntotal:,}  schemas: {s_index.ntotal:,}")
     return {
-        "q_index" : q_index,
-        "s_index" : s_index,
-        "q_meta"  : q_meta,
-        "s_meta"  : s_meta,
+        "q_index": q_index,
+        "s_index": s_index,
+        "q_meta": q_meta,
+        "s_meta": s_meta,
         "embedder": embedder,
     }
 
@@ -75,8 +76,8 @@ def load_graphs():
 def load_all():
     print("Loading Text2SQL data...")
     schema_dict = load_schemas()
-    faiss_data  = load_faiss_indexes()
-    all_graphs  = load_graphs()
+    faiss_data = load_faiss_indexes()
+    all_graphs = load_graphs()
     print("✅ All data loaded\n")
     return schema_dict, faiss_data, all_graphs
 
@@ -91,10 +92,10 @@ def get_schema_text(db_id: str, schema_dict: dict) -> str:
         return f"Schema not found: {db_id}"
 
     tables = schema["table_names_original"]
-    cols   = schema["column_names_original"]
-    types  = schema["column_types"]
-    pks    = schema["primary_keys"]
-    fks    = schema["foreign_keys"]
+    cols = schema["column_names_original"]
+    types = schema["column_types"]
+    pks = schema["primary_keys"]
+    fks = schema["foreign_keys"]
 
     lines = [f"Database: {db_id}"]
     for t_idx, table in enumerate(tables):
@@ -111,8 +112,8 @@ def get_schema_text(db_id: str, schema_dict: dict) -> str:
         for fk in fks:
             col1 = cols[fk[0]][1]
             col2 = cols[fk[1]][1]
-            t1   = tables[cols[fk[0]][0]]
-            t2   = tables[cols[fk[1]][0]]
+            t1 = tables[cols[fk[0]][0]]
+            t2 = tables[cols[fk[1]][0]]
             lines.append(f"  {t1}.{col1} → {t2}.{col2}")
 
     return "\n".join(lines)
@@ -121,7 +122,7 @@ def get_schema_text(db_id: str, schema_dict: dict) -> str:
 def get_valid_columns(db_id: str, schema_dict: dict) -> dict:
     schema = schema_dict.get(db_id, {})
     tables = schema.get("table_names_original", [])
-    cols   = schema.get("column_names_original", [])
+    cols = schema.get("column_names_original", [])
     result = {t.lower(): [] for t in tables}
     for t_i, col_name in cols:
         if t_i >= 0:
@@ -134,11 +135,12 @@ def get_valid_columns(db_id: str, schema_dict: dict) -> dict:
 # ══════════════════════════════════════════════════════════════
 
 def execute_sql(db_id: str, sql: str):
+    print(f"Executing SQL on DB '{db_id}':\n{sql}\n---")
     db_path = DB_DIR / db_id / f"{db_id}.sqlite"
     if not db_path.exists():
         return None, f"Database not found: {db_path}"
     try:
-        conn   = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -153,7 +155,7 @@ def execute_sql(db_id: str, sql: str):
 # ══════════════════════════════════════════════════════════════
 
 def validate_schema(sql: str, db_id: str, schema_dict: dict) -> tuple:
-    valid_cols   = get_valid_columns(db_id, schema_dict)
+    valid_cols = get_valid_columns(db_id, schema_dict)
     valid_tables = set(valid_cols.keys())
 
     for t1, t2 in re.findall(r"\bFROM\s+(\w+)|\bJOIN\s+(\w+)", sql, re.IGNORECASE):
@@ -163,7 +165,7 @@ def validate_schema(sql: str, db_id: str, schema_dict: dict) -> tuple:
 
     for table_alias, col in re.findall(r"\b(\w+)\.(\w+)\b", sql):
         if table_alias.upper() in ("SELECT", "FROM", "WHERE", "GROUP",
-                                    "ORDER", "HAVING", "LIMIT", "ON"):
+                                   "ORDER", "HAVING", "LIMIT", "ON"):
             continue
         t_lower = table_alias.lower()
         c_lower = col.lower()
@@ -192,13 +194,13 @@ def level1_syntax_check(sql: str) -> tuple:
 # ══════════════════════════════════════════════════════════════
 
 def retrieve_similar_examples(question: str, db_id: str,
-                               faiss_data: dict, k: int = 3) -> list:
+                              faiss_data: dict, k: int = 3) -> list:
     import faiss
     import numpy as np
 
     embedder = faiss_data["embedder"]
-    q_index  = faiss_data["q_index"]
-    q_meta   = faiss_data["q_meta"]
+    q_index = faiss_data["q_index"]
+    q_meta = faiss_data["q_meta"]
 
     query_vec = embedder.encode([question]).astype("float32")
     faiss.normalize_L2(query_vec)
@@ -207,9 +209,9 @@ def retrieve_similar_examples(question: str, db_id: str,
     results = []
     for dist, idx in zip(distances[0], indices[0]):
         results.append({
-            "question"  : q_meta["questions"][idx],
-            "sql"       : q_meta["sql_queries"][idx],
-            "db_id"     : q_meta["db_ids"][idx],
+            "question": q_meta["questions"][idx],
+            "sql": q_meta["sql_queries"][idx],
+            "db_id": q_meta["db_ids"][idx],
             "similarity": float(dist),
         })
     return results
@@ -239,11 +241,11 @@ def steiner_tree_approx(G, terminal_tables: list):
         return sg
     connected = [terminals[0]]
     remaining = terminals[1:]
-    steiner   = nx.Graph()
+    steiner = nx.Graph()
     steiner.add_node(terminals[0])
     while remaining:
         best_path = best_target = None
-        best_len  = float("inf")
+        best_len = float("inf")
         for source in connected:
             for target in remaining:
                 try:
@@ -279,7 +281,7 @@ def build_from_clause(steiner) -> str:
     if not join_path:
         return f"FROM {list(steiner.nodes())[0]}"
     from_clause = f"FROM {join_path[0]['table1']}"
-    visited     = {join_path[0]["table1"]}
+    visited = {join_path[0]["table1"]}
     for join in join_path:
         if join["table2"] not in visited:
             from_clause += f" JOIN {join['table2']} ON {join['condition']}"
@@ -291,10 +293,10 @@ def build_from_clause(steiner) -> str:
 
 
 def extract_terminals_schema_linking(question: str, db_id: str,
-                                      schema_dict: dict) -> list:
-    schema  = schema_dict.get(db_id, {})
-    tables  = schema.get("table_names_original", [])
-    cols    = schema.get("column_names_original", [])
+                                     schema_dict: dict) -> list:
+    schema = schema_dict.get(db_id, {})
+    tables = schema.get("table_names_original", [])
+    cols = schema.get("column_names_original", [])
     q_lower = question.lower()
     q_tokens = set(re.sub(r"[^\w\s]", " ", q_lower).split())
     matched = set()
@@ -366,7 +368,7 @@ Description:"""
 
 
 def build_semantic_check_prompt(original_question: str,
-                                 back_translation: str) -> str:
+                                back_translation: str) -> str:
     return f"""You are a strict SQL validation expert. Your job is to find mistakes.
 
 ORIGINAL QUESTION (what the user asked):
@@ -397,20 +399,21 @@ Nothing else."""
 
 
 def build_semantic_repair_prompt(question: str, schema_text: str,
-                                  failed_sql: str, back_translation: str,
-                                  issue_type: str, explanation: str,
-                                  attempt: int) -> str:
+                                 failed_sql: str, back_translation: str,
+                                 issue_type: str, explanation: str,
+                                 attempt: int) -> str:
     fix_instructions = {
-        "wrong_columns"     : "Your SQL selects the wrong columns. Re-read the question and pick only the columns asked for.",
-        "wrong_tables"      : "Your SQL queries the wrong table(s). Check which tables contain the data the question asks about.",
-        "wrong_filter"      : "Your WHERE clause filters on the wrong condition. Re-read the question to identify the correct filter.",
-        "wrong_aggregation" : "The question asks for an aggregation but your SQL uses the wrong one or is missing it.",
-        "missing_groupby"   : "The question asks for results 'per' or 'for each' category but your SQL is missing GROUP BY.",
-        "wrong_ordering"    : "The question asks for 'highest/lowest/most' but your SQL has wrong or missing ORDER BY.",
-        "missing_limit"     : "The question asks for 'top N' or 'the one with' but your SQL is missing LIMIT.",
-        "wrong_logic"       : "The overall logic doesn't match the question. Re-read carefully and restructure.",
+        "wrong_columns": "Your SQL selects the wrong columns. Re-read the question and pick only the columns asked for.",
+        "wrong_tables": "Your SQL queries the wrong table(s). Check which tables contain the data the question asks about.",
+        "wrong_filter": "Your WHERE clause filters on the wrong condition. Re-read the question to identify the correct filter.",
+        "wrong_aggregation": "The question asks for an aggregation but your SQL uses the wrong one or is missing it.",
+        "missing_groupby": "The question asks for results 'per' or 'for each' category but your SQL is missing GROUP BY.",
+        "wrong_ordering": "The question asks for 'highest/lowest/most' but your SQL has wrong or missing ORDER BY.",
+        "missing_limit": "The question asks for 'top N' or 'the one with' but your SQL is missing LIMIT.",
+        "wrong_logic": "The overall logic doesn't match the question. Re-read carefully and restructure.",
     }
-    fix_hint = fix_instructions.get(issue_type, "Fix the SQL so it matches the question intent.")
+    fix_hint = fix_instructions.get(
+        issue_type, "Fix the SQL so it matches the question intent.")
 
     return f"""You are an expert SQL debugger. Semantic repair attempt {attempt}.
 
@@ -459,9 +462,9 @@ def parse_semantic_check(response: str) -> dict:
 
 class ErrorMemory:
     def __init__(self, max_per_type: int = 5):
-        self.memories        = {}
+        self.memories = {}
         self.global_patterns = {}
-        self.max_per_type    = max_per_type
+        self.max_per_type = max_per_type
 
     def record(self, db_id, issue_type, question, bad_sql, fixed_sql=""):
         entry = {"issue_type": issue_type, "question": question,
@@ -487,7 +490,7 @@ class ErrorMemory:
                 e["issue_type"] for e in db_errors
             ).most_common(2):
                 example = next(e for e in reversed(db_errors)
-                             if e["issue_type"] == issue)
+                               if e["issue_type"] == issue)
                 warnings.append(
                     f"- Common mistake on this database: {issue}. "
                     f"Example Q: \"{example['question'][:80]}\""
@@ -507,7 +510,7 @@ class ErrorMemory:
     def get_stats(self):
         from collections import Counter
         all_issues = [e["issue_type"] for db_errors in self.memories.values()
-                     for e in db_errors]
+                      for e in db_errors]
         return {"total_errors": len(all_issues),
                 "by_type": dict(Counter(all_issues)),
                 "databases_affected": len(self.memories)}
@@ -521,5 +524,5 @@ class ErrorMemory:
         if os.path.exists(path):
             with open(path) as f:
                 data = json.load(f)
-            self.memories        = data.get("memories", {})
+            self.memories = data.get("memories", {})
             self.global_patterns = data.get("global_patterns", {})

@@ -15,10 +15,9 @@ interface HistoryItem {
 }
 
 export default function Dashboard() {
-  const [activeDataset, setActiveDataset]           = useState("spider");
   const [activeSchema, setActiveSchema]             = useState("");
   const [activeNav, setActiveNav]                   = useState("query");
-  const [model, setModel]                           = useState<Model>("qwen");
+  const [model, setModel]                           = useState<Model>("groq");
   const [useRag, setUseRag]                         = useState(true);
   const [useSchemaConstrained, setUseSchemaConstrained] = useState(true);
   const [autoRepair, setAutoRepair]                 = useState(false);
@@ -28,6 +27,11 @@ export default function Dashboard() {
   // CoSQL conversation history: alternating question/sql strings
   const conversationHistory = history.flatMap((h) => [h.question, h.sql]);
 
+  const modelBackendMap: Record<Model, ModelBackend> = {
+    groq:   "groq",
+    ollama: "ollama",
+  };
+
   function handleQueryComplete(question: string, sql: string) {
     setHistory((prev) => [
       ...prev,
@@ -35,20 +39,11 @@ export default function Dashboard() {
     ]);
   }
 
-  // Map model key to ModelBackend string
-  const modelBackendMap: Record<Model, ModelBackend> = {
-    qwen:    "ollama",
-    gpt4o:   "openai",
-    seq2sql: "seq2sql",
-  };
-
   return (
     <div className="h-screen flex flex-col bg-zinc-50 overflow-hidden">
       <Navbar model={model} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
-          activeDataset={activeDataset}
-          setActiveDataset={setActiveDataset}
           activeSchema={activeSchema}
           setActiveSchema={setActiveSchema}
           activeNav={activeNav}

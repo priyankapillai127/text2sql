@@ -1,15 +1,16 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://giggling-detector-treble.ngrok-free.dev/api/v1";
-
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  'https://giggling-detector-treble.ngrok-free.dev/api/v1';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ModelBackend = "ollama" | "openai" | "seq2sql";
+export type ModelBackend = 'groq' | 'ollama';
 
 export interface QueryRequest {
   question: string;
   database_name: string;
   model_backend: ModelBackend;
-  use_rag: boolean;
+  pipeline?: string;
   conversation_history?: string[];
 }
 
@@ -47,12 +48,12 @@ export interface SchemaResponse {
 
 export interface HealthComponent {
   name: string;
-  status: "ok" | "degraded" | "unhealthy";
+  status: 'ok' | 'degraded' | 'unhealthy';
   detail: string | null;
 }
 
 export interface HealthResponse {
-  status: "healthy" | "degraded" | "unhealthy";
+  status: 'healthy' | 'degraded' | 'unhealthy';
   version: string;
   components: HealthComponent[];
 }
@@ -85,7 +86,11 @@ export interface BatchEvaluationResponse {
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json","ngrok-skip-browser-warning": "true", ...options?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
+      ...options?.headers,
+    },
     ...options,
   });
   if (!res.ok) {
@@ -97,24 +102,35 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 
-export const healthCheck  = ()             => apiFetch<HealthResponse>("/health/");
-export const healthFull   = ()             => apiFetch<HealthResponse>("/health/full");
+export const healthCheck = () => apiFetch<HealthResponse>('/health/');
+export const healthFull = () => apiFetch<HealthResponse>('/health/full');
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
-export const listDatabases = ()            => apiFetch<string[]>("/schema/databases");
-export const getSchema     = (db: string) => apiFetch<SchemaResponse>(`/schema/${db}`);
+export const listDatabases = () => apiFetch<string[]>('/schema/databases');
+export const getSchema = (db: string) =>
+  apiFetch<SchemaResponse>(`/schema/${db}`);
 
 // ─── RAG ─────────────────────────────────────────────────────────────────────
 
-export const ragStatus     = ()            => apiFetch<RagStatusResponse>("/rag/status");
-export const ragBuildIndex = ()            => apiFetch<{ indexed_count: number; message: string }>("/rag/build-index", { method: "POST", body: JSON.stringify({ examples_path: null }) });
-export const ragLoadIndex  = ()            => apiFetch<{ loaded: boolean; message: string }>("/rag/load-index", { method: "POST" });
+export const ragStatus = () => apiFetch<RagStatusResponse>('/rag/status');
+export const ragBuildIndex = () =>
+  apiFetch<{ indexed_count: number; message: string }>('/rag/build-index', {
+    method: 'POST',
+    body: JSON.stringify({ examples_path: null }),
+  });
+export const ragLoadIndex = () =>
+  apiFetch<{ loaded: boolean; message: string }>('/rag/load-index', {
+    method: 'POST',
+  });
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 export const generateSQL = (body: QueryRequest) =>
-  apiFetch<QueryResponse>("/query/", { method: "POST", body: JSON.stringify(body) });
+  apiFetch<QueryResponse>('/query/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 
 // ─── Evaluate ─────────────────────────────────────────────────────────────────
 
@@ -122,20 +138,24 @@ export interface SingleEvalRequest {
   database_name: string;
   question: string;
   ground_truth_sql: string;
-  model_backend: ModelBackend;
-  use_rag: boolean;
+  pipeline?: string;
 }
 
 export const evaluateSingle = (body: SingleEvalRequest) =>
-  apiFetch<EvaluationResult>("/evaluate/single", { method: "POST", body: JSON.stringify(body) });
+  apiFetch<EvaluationResult>('/evaluate/single', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 
 export interface BatchEvalItem extends SingleEvalRequest {}
 
 export interface BatchEvalRequest {
-  model_backend: ModelBackend;
-  use_rag: boolean;
+  pipeline?: string;
   items: BatchEvalItem[];
 }
 
 export const evaluateBatch = (body: BatchEvalRequest) =>
-  apiFetch<BatchEvaluationResponse>("/evaluate/batch", { method: "POST", body: JSON.stringify(body) });
+  apiFetch<BatchEvaluationResponse>('/evaluate/batch', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });

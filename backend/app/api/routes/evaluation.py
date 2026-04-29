@@ -28,8 +28,7 @@ def _evaluate_single(item: EvaluationRequest) -> EvaluationResult:
     q_request = QueryRequest(
         question=item.question,
         database_name=item.database_name,
-        model_backend=item.model_backend,
-        use_rag=item.use_rag,
+        pipeline=item.pipeline,
     )
     q_response = handle_query(q_request)
     generated_sql = q_response.generated_sql
@@ -83,9 +82,7 @@ def evaluate_batch(request: BatchEvaluationRequest) -> BatchEvaluationResponse:
     results: list[EvaluationResult] = []
 
     for item in request.items:
-        # Override backend/rag settings from batch-level config
-        item.model_backend = request.model_backend
-        item.use_rag = request.use_rag
+        item.pipeline = request.pipeline
         results.append(_evaluate_single(item))
 
     total = len(results)

@@ -1,4 +1,4 @@
-export type Model = "qwen" | "gpt4o" | "seq2sql";
+export type Model = "groq" | "ollama";
 
 export interface QueryResult {
   columns: string[];
@@ -45,7 +45,7 @@ export const HISTORY: QueryRecord[] = [
       execTimeMs: 12,
     },
     timestamp: "2 min ago",
-    model: "qwen",
+    model: "groq",
   },
   {
     id: "2",
@@ -64,7 +64,7 @@ export const HISTORY: QueryRecord[] = [
       execTimeMs: 8,
     },
     timestamp: "8 min ago",
-    model: "qwen",
+    model: "groq",
   },
   {
     id: "3",
@@ -83,18 +83,16 @@ export const HISTORY: QueryRecord[] = [
       execTimeMs: 15,
     },
     timestamp: "15 min ago",
-    model: "gpt4o",
+    model: "groq",
   },
 ];
 
 export const EVAL_METRICS = {
-  qwen:   { execAcc: 0.78, exactMatch: 0.61, ragBoost: 0.09, queriesRun: 142 },
-  gpt4o:  { execAcc: 0.91, exactMatch: 0.79, ragBoost: 0.05, queriesRun: 58  },
-  seq2sql:{ execAcc: 0.48, exactMatch: 0.39, ragBoost: 0.04, queriesRun: 31  },
+  groq:   { execAcc: 0.82, exactMatch: 0.67, ragBoost: 0.11, queriesRun: 142 },
+  ollama: { execAcc: 0.78, exactMatch: 0.61, ragBoost: 0.09, queriesRun: 58  },
 };
 
 export const MODEL_LABELS: Record<Model, { name: string; sub: string; tag: string; tagColor: string }> = {
-  qwen:   { name: "Qwen2.5-Coder", sub: "7B · instruct",  tag: "local", tagColor: "bg-sky-100 text-sky-700" },
-  gpt4o:  { name: "GPT-4o",        sub: "frontier",        tag: "API",   tagColor: "bg-amber-100 text-amber-700" },
-  seq2sql:{ name: "Seq2SQL",       sub: "baseline",        tag: "classic", tagColor: "bg-zinc-100 text-zinc-500" },
+  groq:   { name: "Llama 3.3 70B",  sub: "via Groq · fast", tag: "Groq",  tagColor: "bg-orange-100 text-orange-700" },
+  ollama: { name: "Qwen2.5-Coder",  sub: "7B · local",      tag: "local", tagColor: "bg-sky-100 text-sky-700"       },
 };

@@ -16,7 +16,7 @@ utils_local dependency without installing it as a package.
 from __future__ import annotations
 
 import importlib
-import os
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any
@@ -53,10 +53,6 @@ def _ensure_module() -> Any:
     if ml_str not in sys.path:
         sys.path.insert(0, ml_str)
 
-    # Forward GROQ_API_KEY to the environment if the ML module hasn't loaded yet
-    if settings.groq_api_key and not os.getenv("GROQ_API_KEY"):
-        os.environ["GROQ_API_KEY"] = settings.groq_api_key
-
     _pipeline_mod = importlib.import_module("pipeline")
     return _pipeline_mod
 
@@ -73,7 +69,8 @@ def initialize() -> bool:
         logger.info("ML pipeline initialised — FAISS + schema graphs loaded.")
         return True
     except Exception as exc:
-        logger.warning("ML pipeline init failed (Groq pipeline unavailable): %s", exc)
+        logger.warning(
+            "ML pipeline init failed (Groq pipeline unavailable): %s", exc)
         return False
 
 
@@ -105,5 +102,36 @@ def run(question: str, db_id: str, pipeline: str = "rag_bt") -> dict:
         raise RuntimeError(
             "ML pipeline is not initialised. Ensure initialize() succeeded at startup."
         )
+
     mod = _ensure_module()
     return mod.run(question, db_id, _ctx, pipeline=pipeline)
+
+
+def get_schema_text(db_id: str) -> str:
+    """Return schema as prompt-ready text for a Spider database."""
+    if not is_ready():
+        return ""
+    utils = importlib.import_module("utils_local")
+    return utils.get_schema_text(db_id, _ctx["schema_dict"])
+
+
+def execute_query(db_id: str, sql: str) -> tuple[list[dict] | None, str | None]:
+    """Execute SQL against a Spider SQLite database. Returns (rows as dicts, error)."""
+    db_path = _ml_dir() / "data" / "database" / db_id / f"{db_id}.sqlite"
+    print(f"db_path for execution: {db_path}")  # Debug log for database path
+    if not db_path.exists():
+        return None, f"Database file not found: {db_path}"
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        rows = [dict(row) for row in cursor.fetchall()]
+        # Debug log for execution success
+        print(f"Query executed successfully, {len(rows)} rows returned.")
+        conn.close()
+        return rows, None
+    except sqlite3.Error as exc:
+        return None, str(exc)
+    except Exception as exc:
+        return None, f"Unexpected error: {exc}"

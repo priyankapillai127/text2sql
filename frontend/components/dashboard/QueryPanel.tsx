@@ -31,7 +31,6 @@ export default function QueryPanel({
         question: input.trim(),
         database_name: database,
         model_backend: model,
-        use_rag: useRag,
         conversation_history: conversationHistory,
       });
       setResult(res);

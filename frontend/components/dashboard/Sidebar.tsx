@@ -11,8 +11,6 @@ const NAV = [
 ];
 
 interface SidebarProps {
-  activeDataset: string;
-  setActiveDataset: (d: string) => void;
   activeSchema: string;
   setActiveSchema: (s: string) => void;
   activeNav: string;
@@ -20,7 +18,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
-  activeDataset, setActiveDataset,
   activeSchema, setActiveSchema,
   activeNav, setActiveNav,
 }: SidebarProps) {
@@ -52,24 +49,16 @@ export default function Sidebar({
   return (
     <aside className="w-[220px] shrink-0 bg-white border-r border-zinc-100 flex flex-col overflow-y-auto">
       <div className="px-3 pt-4">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 px-2 mb-1">Datasets</p>
-        {["spider", "cosql"].map((ds) => {
-          const active = activeDataset === ds;
-          return (
-            <button key={ds} onClick={() => setActiveDataset(ds)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm mb-0.5 transition-colors ${active ? "bg-zinc-100 text-zinc-900 font-medium" : "text-zinc-500 hover:bg-zinc-50"}`}>
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <ellipse cx="12" cy="7" rx="9" ry="3.5" />
-                <path d="M3 7v10c0 1.933 4.03 3.5 9 3.5s9-1.567 9-3.5V7" />
-                <path d="M3 12c0 1.933 4.03 3.5 9 3.5s9-1.567 9-3.5" />
-              </svg>
-              {ds === "spider" ? "Spider" : "CoSQL"}
-              <span className="ml-auto text-[10px] bg-zinc-100 text-zinc-400 px-1.5 py-0.5 rounded">
-                {ds === "spider" ? "200 DBs" : "conv."}
-              </span>
-            </button>
-          );
-        })}
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 px-2 mb-1">Dataset</p>
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-zinc-100">
+          <svg className="w-4 h-4 shrink-0 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <ellipse cx="12" cy="7" rx="9" ry="3.5" />
+            <path d="M3 7v10c0 1.933 4.03 3.5 9 3.5s9-1.567 9-3.5V7" />
+            <path d="M3 12c0 1.933 4.03 3.5 9 3.5s9-1.567 9-3.5" />
+          </svg>
+          <span className="text-sm font-medium text-zinc-900">Spider</span>
+          <span className="ml-auto text-[10px] bg-white text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded">200 DBs</span>
+        </div>
       </div>
 
       <div className="px-3 pt-4">

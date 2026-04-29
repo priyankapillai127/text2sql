@@ -18,9 +18,8 @@ from pydantic import BaseModel, Field
 # ──────────────────────────────────────────────
 
 class ModelBackend(str, Enum):
-    GROQ = "groq"           # Groq-hosted LLM via the ML pipeline
-    OPENAI = "openai"       # proprietary frontier model via API
-    SEQ2SQL = "seq2sql"     # classical baseline (stub)
+    GROQ   = "groq"    # Groq-hosted Llama via ml/pipeline.py
+    OLLAMA = "ollama"  # Local Ollama model
 
 
 class ErrorCategory(str, Enum):
@@ -42,11 +41,7 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=3, description="Natural language question")
     database_name: str = Field(..., description="Target Spider/CoSQL database name")
     model_backend: ModelBackend = Field(ModelBackend.GROQ, description="LLM backend to use")
-    use_rag: bool = Field(True, description="Whether to augment prompt with RAG context")
-    pipeline: str = Field(
-        "rag_bt",
-        description="ML pipeline mode when using groq backend: raw | rag | rag_bt",
-    )
+    pipeline: str = Field("rag_bt", description="ML pipeline mode (groq only): raw | rag | rag_bt")
     conversation_history: list[str] = Field(
         default_factory=list,
         description="Previous turns (for CoSQL conversational mode)"
@@ -110,18 +105,7 @@ class EvaluationRequest(BaseModel):
     database_name: str
     question: str
     ground_truth_sql: str
-    model_backend: ModelBackend = ModelBackend.GROQ
-    use_rag: bool = True
-
-    model_config = {"json_schema_extra": {
-        "example": {
-            "database_name": "concert_singer",
-            "question": "How many singers are there?",
-            "ground_truth_sql": "SELECT count(*) FROM singer",
-            "model_backend": "ollama",
-            "use_rag": True
-        }
-    }}
+    pipeline: str = "rag_bt"
 
 
 class EvaluationResult(BaseModel):
@@ -137,8 +121,7 @@ class EvaluationResult(BaseModel):
 
 class BatchEvaluationRequest(BaseModel):
     items: list[EvaluationRequest]
-    model_backend: ModelBackend = ModelBackend.GROQ
-    use_rag: bool = True
+    pipeline: str = "rag_bt"
 
 
 class BatchEvaluationResponse(BaseModel):

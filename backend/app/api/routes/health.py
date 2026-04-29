@@ -50,17 +50,17 @@ def full_health_check() -> HealthResponse:
     # ── API itself ─────────────────────────────────────────
     components.append(ComponentStatus(name="api", status="ok"))
 
-    # ── Groq / ML pipeline ────────────────────────────────
+    # ── ML pipeline ───────────────────────────────────────
     if ml_pipeline_service.is_ready():
         components.append(
-            ComponentStatus(name="groq_pipeline", status="ok", detail="ML pipeline loaded")
+            ComponentStatus(name="ml_pipeline", status="ok", detail="ML pipeline loaded")
         )
     else:
         components.append(
             ComponentStatus(
-                name="groq_pipeline",
+                name="ml_pipeline",
                 status="unavailable",
-                detail="ML pipeline not initialised — check GROQ_API_KEY and ml/data/",
+                detail="ML pipeline not initialised — check GROQ_API_KEY in ml/.env and ml/data/",
             )
         )
 
@@ -93,14 +93,6 @@ def full_health_check() -> HealthResponse:
                 status="degraded",
                 detail="Index not built yet. POST /rag/build-index to create it.",
             )
-        )
-
-    # ── OpenAI (optional) ─────────────────────────────────
-    if settings.openai_api_key:
-        components.append(ComponentStatus(name="openai", status="ok", detail="API key configured"))
-    else:
-        components.append(
-            ComponentStatus(name="openai", status="degraded", detail="OPENAI_API_KEY not set")
         )
 
     # ── Derive overall status ─────────────────────────────
