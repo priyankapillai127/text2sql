@@ -34,8 +34,8 @@ pip install -r requirements.txt
 uvicorn main:app --reload  # http://localhost:8000
 ```
 ## Evaluation
-Results, diagnostics, and experiment notebooks are in ml/evaluation/.
-See ml/evaluation/EVALUATION_SUMMARY.md for full results.
+Results, diagnostics, and experiment notebooks are in evaluation/.
+See evaluation/EVALUATION_SUMMARY.md for full results.
 
 
 ## ML Pipeline
